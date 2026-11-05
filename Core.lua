@@ -12,6 +12,26 @@ function A:Print(message)
     DEFAULT_CHAT_FRAME:AddMessage("|cff55ccffChromie Crafting :|r " .. message)
 end
 
+function A:DebugState()
+    self:Print("Diagnostic v" .. tostring(GetAddOnMetadata("ChromieCrafting", "Version"))
+        .. " : métier natif=" .. tostring(GetTradeSkillLine()) .. ", affiché=" .. tostring(self.profession))
+    self:Print("ouvert=" .. tostring(self.open) .. ", mémorisé=" .. tostring(self.viewing)
+        .. ", métier lié=" .. tostring(self.linkedView)
+        .. ", propre personnage=" .. tostring(not self.viewing or self.viewedCharacter == self.characterKey)
+        .. ", lecture en cours=" .. tostring(self.reading) .. ", combat=" .. tostring(InCombatLockdown()))
+    self:Print("banque=" .. tostring(self.bankOpen) .. ", BDG=" .. tostring(self.guildBankOpen)
+        .. ", retrait autorisé=" .. tostring(self:CanWithdraw()) .. ", action en cours=" .. tostring(not not (self.running or self.pending or self.withdrawal)))
+    if self.guildBankOpen then
+        local tab = GetCurrentGuildBankTab()
+        local name, _, viewable, _, limit, remaining = GetGuildBankTabInfo(tab)
+        self:Print("onglet=" .. tostring(tab) .. " " .. tostring(name) .. ", visible=" .. tostring(viewable)
+            .. ", quota=" .. tostring(limit) .. ", restant=" .. tostring(remaining))
+    end
+    local r = self.byKey[self.selectedKey]
+    self:Print("recette=" .. tostring(self.selectedKey) .. ", connue=" .. tostring(r and r.known)
+        .. ", fabricable=" .. tostring(r and r.available) .. ", état=" .. tostring(self.status))
+end
+
 function A:Initialize()
     ChromieCraftingDB = ChromieCraftingDB or {}
     self.db = ChromieCraftingDB
@@ -91,14 +111,20 @@ function A:RecipeAt(index, category)
     }
     local enchanting = GetSpellInfo(7411)
     r.requiresTarget = self.profession == enchanting and not itemID
+    local bagAvailable
     for j = 1, GetTradeSkillNumReagents(index) do
         local reagentName, icon, count, owned = GetTradeSkillReagentInfo(index, j)
         local link = GetTradeSkillReagentItemLink(index, j)
         local id = linkID(link, "item")
         owned = (id or reagentName) and GetItemCount(id or reagentName, false) or 0
         r.reagents[#r.reagents + 1] = {id = id, name = reagentName, icon = icon, count = count or 0, owned = owned or 0, link = link}
-        if count and count > 0 then r.available = math.min(r.available, math.floor((owned or 0) / count)) end
+        if count and count > 0 then
+            local possible = math.floor((owned or 0) / count)
+            bagAvailable = bagAvailable and math.min(bagAvailable, possible) or possible
+        end
     end
+    -- The native makeable count can stay at zero until the profession is reopened.
+    if bagAvailable then r.available = bagAvailable end
     return r
 end
 
@@ -107,6 +133,7 @@ function A:RefreshRecipes()
     self.reading = true
     local profession, rank, maxRank = GetTradeSkillLine()
     if not profession or profession == "UNKNOWN" then self.reading = nil; return end
+    self.linkedView = IsTradeSkillLinked() and true or nil
     if self.profession ~= profession then
         self:Pause()
         self.profession, self.selectedKey = profession, nil
@@ -167,6 +194,21 @@ function A:Resolve(key)
     return found, "Recette introuvable dans le métier ouvert."
 end
 
+function A:ResumeProfession(expected)
+    if self.running or self.pending or self.withdrawal or InCombatLockdown() then return false end
+    if expected and IsTradeSkillLinked() then return false end
+    local profession = GetTradeSkillLine()
+    if not profession or profession == "UNKNOWN" then self.open = false; return false end
+    if expected and profession ~= expected then return false end
+    local selected = self.profession == profession and self.selectedKey
+    self.open, self.viewing, self.viewedCharacter = true, nil, nil
+    self.profession = nil
+    self:ResetNativeFilters()
+    self:RefreshRecipes()
+    if selected and self.byKey[selected] then self.selectedKey = selected; if self.Render then self:Render() end end
+    return true
+end
+
 function A:Pause(message)
     self.running = false
     if StopTradeSkillRepeat then StopTradeSkillRepeat() end
@@ -204,7 +246,7 @@ function A:NextCraft()
     local entry = self.jobs and self.jobs[1]
     local reason
     if self.viewing or self.withdrawal or not self.open or self.native then reason = "Ouvre ton métier pour fabriquer."
-    elseif IsTradeSkillLinked() then reason = "Métier lié : consultation seulement."
+    elseif self.linkedView or IsTradeSkillLinked() then reason = "Métier lié : consultation seulement."
     elseif InCombatLockdown() then reason = "Fabrication suspendue en combat."
     elseif not entry then reason = "Fabrication terminée."
     elseif UnitCastingInfo("player") or UnitChannelInfo("player") or SpellIsTargeting() then reason = "Termine ton action en cours avant de lancer la file." end
@@ -372,12 +414,12 @@ SLASH_CHROMIECRAFTING1 = "/ccraft"
 SLASH_CHROMIECRAFTING2 = "/metiers"
 SlashCmdList.CHROMIECRAFTING = function(message)
     if not A.db then return end
+    if message == "debug" then A:DebugState(); return end
     if InCombatLockdown() then A:Print("La fenêtre des métiers est indisponible en combat."); return end
     if message == "blizzard" then A:UseNative(); return end
     A.native, A.db.native = false, false
     A:SuppressNative()
     if GetTradeSkillLine() and GetTradeSkillLine() ~= "UNKNOWN" then
-        A.open = true
-        A:ResetNativeFilters(); A:CreateUI(); A.frame:Show(); A:RefreshRecipes()
+        A:CreateUI(); A.frame:Show(); A:ResumeProfession()
     else A:OpenDashboard() end
 end

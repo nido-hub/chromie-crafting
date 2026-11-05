@@ -27,6 +27,7 @@ function CreateFrame()
 end
 DEFAULT_CHAT_FRAME = {AddMessage = function() end}
 local now, linked, available, cooldown, tools = 1, false, 8, 0, true
+local bagOwned=16
 local records = {
     {name = "Potions", kind = "header"},
     {name = "Potion A", kind = "optimal", spell = 101, item = 501},
@@ -47,7 +48,7 @@ function GetTradeSkillCooldown() return cooldown end
 function GetTradeSkillTools() return "Fiole", tools end
 function GetTradeSkillDescription() return "Description" end
 function IsTradeSkillLinked() return linked end
-function GetItemCount() return 16 end
+function GetItemCount() return bagOwned end
 function InCombatLockdown() return false end
 function SpellIsTargeting() return false end
 function UnitCastingInfo() end
@@ -83,9 +84,9 @@ A:OnEvent("UNIT_SPELLCAST_SUCCEEDED", "player", "Potion A", "", 2, 101)
 assert(A.queue[1].count == 1, "confirmation dupliquée ignorée dans un lot")
 A:OnEvent("UNIT_SPELLCAST_INTERRUPTED", "player", "Potion A", "", 3, 101)
 assert(not A.running and A.queue[1].count == 1, "interruption conserve le travail restant")
-available = 0; A:StartQueue()
+available = 0; bagOwned=0; A:StartQueue()
 assert(#calls == 1 and not A.running, "pas de composants : pas de craft")
-available = 8; cooldown = 10; A:StartQueue()
+available = 8; bagOwned=16; cooldown = 10; A:StartQueue()
 assert(#calls == 1 and not A.running, "recharge : pas de craft")
 cooldown = 0; tools = false; A:StartQueue()
 assert(#calls == 1 and not A.running, "outil manquant : pas de craft")
@@ -141,13 +142,13 @@ assert(#calls == before+1 and not A.running and not A.pending and #A.queue == 1 
 A:StartQueue()
 assert(#calls == before+2, "le clic suivant lance la prochaine recette")
 A:OnEvent("UNIT_SPELLCAST_SUCCEEDED", "player", "Potion B", "", 12, 102)
-available=2; A.selectedKey="s101"; A:CraftSelected(5)
+available=2; bagOwned=4; A.selectedKey="s101"; A:CraftSelected(5)
 assert(calls[#calls].count == 2, "lot limité aux composants disponibles")
 A:OnEvent("UNIT_SPELLCAST_SUCCEEDED", "player", "Potion A", "", 13, 101)
 A:Stop()
 A:OnEvent("UNIT_SPELLCAST_SUCCEEDED", "player", "Potion A", "", 14, 101)
 assert(not A.pending and not A.running and A.jobs[1].count == 3, "arrêt du lot : succès tardif décompté sans répétition")
-available=8
+available=8; bagOwned=16
 -- The native API uses a negative count when a required tool/focus is absent.
 available=-8
 assert(A:RecipeAt(3).available==8, "un compteur natif négatif ne bloque pas les composants disponibles")
@@ -155,10 +156,11 @@ available=8
 local tradeLine = GetTradeSkillLine
 function GetTradeSkillLine() return "Cuisine", 100, 150 end
 A:RefreshRecipes(); A.dirty=nil
-available=3
+available=3; bagOwned=6
 A:Tick(1)
 assert(A.byKey.s101.available==3, "cuisine actualisée même sans événement de sacs ou changement de recette")
 GetTradeSkillLine=tradeLine
+bagOwned=16
 A:RefreshRecipes()
 A.selectedKey="s101"
 local resolve = A.Resolve

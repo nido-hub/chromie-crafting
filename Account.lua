@@ -48,7 +48,7 @@ end
 
 function A:SaveProfession()
     if not self.account then self:InitializeAccount() end
-    if self.viewing or (IsTradeSkillLinked and IsTradeSkillLinked()) or not self.profession then return end
+    if self.viewing or self.linkedView or (IsTradeSkillLinked and IsTradeSkillLinked()) or not self.profession then return end
     local recipes = copy(self.recipes)
     for _, recipe in ipairs(recipes) do
         recipe.index, recipe.available, recipe.cooldown = nil, nil, nil
@@ -103,6 +103,8 @@ end
 
 function A:SelectCharacter(key, profession)
     if self.running or self.pending or self.withdrawal or InCombatLockdown() then return end
+    if key == self.characterKey and self:ResumeProfession(profession) then return end
+    self.linkedView = nil
     self.viewing, self.viewedCharacter = true, key
     self.profession, self.selectedKey = profession, nil
     local character = self.account.characters[key]

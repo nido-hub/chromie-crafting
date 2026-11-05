@@ -1,4 +1,4 @@
-# Chromie Crafting — 0.4.0
+# Chromie Crafting — 0.4.1
 
 Addon français pour WoW 3.3.5a (30300), installé dans son propre dossier.
 
@@ -131,12 +131,13 @@ réellement disponibles pour le métier ouvert, indépendamment de ces options.
 ### Retirer les composants à la banque
 
 1. Ouvrir sa **banque personnelle**, ou l'**onglet souhaité de sa banque de guilde**,
-   et son métier sur le personnage connecté.
+   puis `/ccraft` et une recette connue du **personnage connecté**. Ses recettes
+   mémorisées suffisent pour retirer les composants, même si le métier natif est fermé.
 2. Choisir une recette et une quantité d'opérations, puis **Retirer composants** ;
    ou préparer une file et utiliser **Retirer pour la file**.
 3. L'addon retire uniquement ce qui manque dans les sacs, attend la confirmation
    de chaque transfert, et ne déclenche **aucun craft automatiquement**.
-4. Cliquer ensuite sur **Fabriquer** ou **Lancer la file**.
+4. Ouvrir son métier si nécessaire, puis cliquer sur **Fabriquer** ou **Lancer la file**.
 
 Le retrait s'arrête si la banque ou la fenêtre se ferme, en combat, sur un objet
 verrouillé, un curseur occupé ou une confirmation absente. **Arrêter** annule aussi
@@ -162,6 +163,23 @@ les composants de la BDG.
 
 Bouton « Fenêtre Blizzard » ou `/ccraft blizzard` ; choix mémorisé.
 `/ccraft` ou `/metiers` réactive la nouvelle interface. Aucun addon existant modifié.
+
+## En cas de blocage
+
+Sans changer de métier ni recharger l'interface, saisir **`/ccraft debug`** au
+moment du problème. Copier les lignes du chat ou envoyer une capture : version,
+métier natif et affiché, mode mémorisé, banque ouverte, droits et quota de l'onglet
+BDG, recette et dernier message. Cette commande est en lecture seule ; elle ne
+déplace aucun composant et ne lance aucun sort. Une validation en jeu reste
+nécessaire malgré les tests hors client.
+
+Pour vérifier la 0.4.1, rester sur la même recette pendant l'essai :
+- en cuisine, ajouter les composants aux sacs puis s'approcher d'un feu ;
+- en banque, choisir une recette dont un ingrédient manque complètement et
+  vérifier que les autres sont retirés ;
+- en BDG, choisir l'onglet contenant les composants puis une recette mémorisée
+  de son personnage connecté, et cliquer sur **Retirer composants**.
+Ne pas changer de métier avant `/ccraft debug` si un essai échoue.
 
 ## Limites connues
 

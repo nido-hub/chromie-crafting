@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.1
+
+- Correction du compteur fabricable : calcul depuis les composants présents dans les sacs, sans rester bloqué par un compteur natif périmé à zéro.
+- Réconciliation du métier actif avec la fenêtre mémorisée lors du retour à son personnage, de l'ouverture du tableau de bord et de `/ccraft` ; plus besoin de changer de métier pour quitter cette consultation.
+- Retraits personnels et BDG autorisés depuis les recettes connues mémorisées du personnage connecté, même lorsque le métier natif est fermé. Les autres personnages restent en lecture seule et fabriquer exige toujours un métier ouvert.
+- Tests reproduisant les états bloqués de la 0.4.0, dont un retrait BDG partiel avec un autre ingrédient absent et sans API de métier active.
+- `/ccraft debug` affiche la version, les états de fenêtre, les droits de retrait BDG et la recette sélectionnée, sans déplacer d'objet ni lancer de craft.
+- Vérification en jeu encore nécessaire : si le blocage persiste, lancer `/ccraft debug` au moment du problème et transmettre les lignes affichées.
+
 ## 0.4.0
 
 - Cuisine : bouton sécurisé « Créer un feu de camp » pour le sort appris.

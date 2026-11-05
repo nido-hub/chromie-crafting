@@ -519,7 +519,7 @@ function A:RenderDetails()
     local r = self.byKey[self.selectedKey]
     local quantity = M.Quantity(self.quantity:GetText())
     local busy = self.running or self.pending or self.withdrawal
-    local writable = self.open and not self.viewing and not IsTradeSkillLinked() and not self.native
+    local writable = self.open and not self.viewing and not self.linkedView and not IsTradeSkillLinked() and not self.native
     if not InCombatLockdown() then
         local fire = GetSpellInfo(818)
         local cooking = writable and self.profession == GetSpellInfo(2550)
@@ -534,7 +534,7 @@ function A:RenderDetails()
     enable(self.maxButton, r and r.known and (r.available or 0) > 0)
     enable(self.favoriteButton, r ~= nil)
     self.favoriteButton:SetText(r and self:IsFavorite(r.key) and "|cffffd166*|r" or "|cff909080*|r")
-    enable(self.withdrawButton, actionable and (self.bankOpen or self.guildBankOpen))
+    enable(self.withdrawButton, self:CanWithdraw() and r and r.known and not r.ambiguous and quantity and not busy)
     if not r then
         self.resultIcon:Hide()
         self.detailTitle:SetText("Choisis une recette")
@@ -586,7 +586,7 @@ function A:Render()
     if not self.frame or self.rendering then return end
     self.rendering = true
     self.title:SetText((self.profession or "Métiers du compte") .. "  " .. (self.rank or 0) .. "/" .. (self.maxRank or 0) .. "  |cffb6a68a— Chromie Crafting|r")
-    self.subtitle:SetText(self.viewing and "Consultation mémorisée • ouvre ce métier pour fabriquer" or (IsTradeSkillLinked() and "Métier lié : consultation uniquement." or "Atelier du compte • fabrication avec les composants des sacs"))
+    self.subtitle:SetText(self.viewing and "Consultation mémorisée • ouvre ce métier pour fabriquer" or ((self.linkedView or IsTradeSkillLinked()) and "Métier lié : consultation uniquement." or "Atelier du compte • fabrication avec les composants des sacs"))
     self.headerIcon:SetTexture(professionIcon(self.profession))
     self.skillFill:SetWidth(math.max(0.01, (self.skillTrack:GetWidth()-4)*math.min(1, (self.rank or 0)/math.max(1,self.maxRank or 1))))
     self.queuePageButton:SetText("File de fabrication (" .. #self.queue .. ")")
@@ -655,8 +655,8 @@ function A:Render()
         end
     end
     self.setNeeds(#lines > 0 and table.concat(lines, "\n\n") or "Ajoute des recettes à la file pour voir leurs besoins cumulés.")
-    enable(self.startButton, self.open and not self.viewing and #self.queue > 0 and not busy and not IsTradeSkillLinked() and not self.native)
-    enable(self.withdrawQueueButton, self.open and not self.viewing and (self.bankOpen or self.guildBankOpen) and #self.queue > 0 and not busy and not IsTradeSkillLinked())
+    enable(self.startButton, self.open and not self.viewing and not self.linkedView and #self.queue > 0 and not busy and not IsTradeSkillLinked() and not self.native)
+    enable(self.withdrawQueueButton, self:CanWithdraw() and #self.queue > 0 and not busy)
     enable(self.stopButton, busy)
     enable(self.clearButton, #self.queue > 0 and not busy and not self.viewing)
     self.statusText:SetText(self.status or "Prêt. La fabrication ne démarre qu'après ton clic.")
@@ -800,7 +800,7 @@ function A:OpenDashboard()
     self:SuppressNative()
     self:CreateUI()
     self.frame:Show()
-    if self.open and not self.viewing then self:RefreshRecipes(); return end
+    if (not self.viewing or self.viewedCharacter == self.characterKey) and self:ResumeProfession() then return end
     local names = self:ProfessionNames()
     if not self.profession and names[1] then self:SelectCharacter(self.characterKey, names[1])
     else self:Render() end

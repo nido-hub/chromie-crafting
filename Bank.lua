@@ -12,10 +12,16 @@ function A:FinishWithdrawal(message)
     if self.Render then self:Render() end
 end
 
+function A:CanWithdraw()
+    return (self.bankOpen or self.guildBankOpen) and not self.native and not self.linkedView
+        and (not self.viewing or self.viewedCharacter == self.characterKey)
+        and not IsTradeSkillLinked() and not InCombatLockdown()
+end
+
 function A:Withdraw(queue, quantity)
     if self.withdrawal or self.running or self.pending then return end
-    if not (self.bankOpen or self.guildBankOpen) or not self.open or self.native or self.viewing or IsTradeSkillLinked() or InCombatLockdown() then
-        self:FinishWithdrawal("Ouvre une banque et ton métier sur le personnage connecté pour retirer les composants."); return
+    if not self:CanWithdraw() then
+        self:FinishWithdrawal("Ouvre une banque et choisis une recette du personnage connecté pour retirer les composants."); return
     end
     if GetCursorInfo() then self:FinishWithdrawal("Libère le curseur avant de retirer les composants."); return end
     local jobs = self.queue
