@@ -56,8 +56,8 @@ local function surface(parent, r, g, b, gold)
     parent.surface = {fill=fill}
 end
 
-local function button(parent, text, x, y, width, callback)
-    local b = CreateFrame("Button", nil, parent)
+local function button(parent, text, x, y, width, callback, template)
+    local b = CreateFrame("Button", nil, parent, template)
     surface(b, 0.14, 0.115, 0.075, true)
     local font = label(b, "", 0, 0)
     font:ClearAllPoints(); font:SetPoint("LEFT", b, "LEFT", 3, 0); font:SetPoint("RIGHT", b, "RIGHT", -3, 0)
@@ -69,7 +69,7 @@ local function button(parent, text, x, y, width, callback)
     local highlight = solid(b, "HIGHLIGHT", 0.8, 0.6, 0.22, 0.15)
     highlight:SetAllPoints(b)
     b:SetPoint("TOPLEFT", x, y); b:SetWidth(width); b:SetHeight(23); b:SetText(text)
-    b:SetScript("OnClick", callback)
+    if callback then b:SetScript("OnClick", callback) end
     return b
 end
 
@@ -204,6 +204,7 @@ function A:LayoutUI()
 end
 
 function A:ShowDetailPage(page)
+    if InCombatLockdown() then return end
     self.detailPage = page
     if page == "queue" then self.recipePage:Hide(); self.queuePage:Show()
     else self.queuePage:Hide(); self.recipePage:Show() end
@@ -383,6 +384,8 @@ function A:CreateUI()
     self.detailTitle:SetHeight(44)
     self.setDescription, self.descriptionScroll = textScroll(details, "ChromieCraftingDescription", 0, -70, 492, 92)
     self.reagentTitle = label(details, "Composants", 0, -174, 492, "GameFontNormal")
+    self.campfireButton = button(details, "Créer un feu de camp", 0, 0, 160, nil, "SecureActionButtonTemplate")
+    self.campfireButton:ClearAllPoints(); self.campfireButton:SetPoint("TOPRIGHT", 0, -168)
     self.setReagents, self.reagentScroll = textScroll(details, "ChromieCraftingReagents", 0, -198, 492, 174)
     self.reagentScroll.text:SetSpacing(8)
     local quantityLabel = label(details, "Opérations :", 0, 0)
@@ -490,7 +493,7 @@ function A:CreateUI()
     self.queueHelp = label(details, "Quantités = opérations, pas objets produits.\nModifier la quantité d'une ligne puis Entrée.", 315, -556, 285)
     self.queueHelp:SetHeight(20)
     self.queueHelp:ClearAllPoints(); self.queueHelp:SetPoint("BOTTOMLEFT", 0, 57)
-    self.queueHelp:SetText("Retrait : banque personnelle ouverte uniquement.")
+    self.queueHelp:SetText("Retrait : banque personnelle ou onglet de banque de guilde ouvert.")
     self.statusText = label(root, "", 0, 0, 600)
     self.statusText:SetHeight(30)
     self.statusText:ClearAllPoints(); self.statusText:SetPoint("BOTTOMLEFT", 22, 5)
@@ -517,13 +520,21 @@ function A:RenderDetails()
     local quantity = M.Quantity(self.quantity:GetText())
     local busy = self.running or self.pending or self.withdrawal
     local writable = self.open and not self.viewing and not IsTradeSkillLinked() and not self.native
+    if not InCombatLockdown() then
+        local fire = GetSpellInfo(818)
+        local cooking = writable and self.profession == GetSpellInfo(2550)
+        self.campfireButton:SetAttribute("type", cooking and "spell" or nil)
+        self.campfireButton:SetAttribute("spell", cooking and fire or nil)
+        if cooking then self.campfireButton:Show() else self.campfireButton:Hide() end
+        enable(self.campfireButton, cooking and fire and IsSpellKnown(818) and not busy)
+    end
     local actionable = writable and r and r.known and not r.ambiguous and quantity and not busy
     enable(self.addButton, actionable)
     enable(self.craftButton, actionable and (r.available or 0) >= 1 and (r.cooldown or 0) == 0)
     enable(self.maxButton, r and r.known and (r.available or 0) > 0)
     enable(self.favoriteButton, r ~= nil)
     self.favoriteButton:SetText(r and self:IsFavorite(r.key) and "|cffffd166*|r" or "|cff909080*|r")
-    enable(self.withdrawButton, actionable and self.bankOpen)
+    enable(self.withdrawButton, actionable and (self.bankOpen or self.guildBankOpen))
     if not r then
         self.resultIcon:Hide()
         self.detailTitle:SetText("Choisis une recette")
@@ -546,6 +557,7 @@ function A:RenderDetails()
             if text and text ~= "" then lines[#lines+1] = text end
         end
         if not self.viewing and r.index then
+            if self.open and not self.native and not InCombatLockdown() and GetTradeSkillSelectionIndex() ~= r.index then SelectTradeSkill(r.index) end
             local tools = {GetTradeSkillTools(r.index)}
             for i=1,#tools,2 do
                 if tools[i] then lines[#lines+1] = "Outil : " .. tools[i] .. (tools[i+1] and " (présent)" or " |cffff6666(manque)|r") end
@@ -644,7 +656,7 @@ function A:Render()
     end
     self.setNeeds(#lines > 0 and table.concat(lines, "\n\n") or "Ajoute des recettes à la file pour voir leurs besoins cumulés.")
     enable(self.startButton, self.open and not self.viewing and #self.queue > 0 and not busy and not IsTradeSkillLinked() and not self.native)
-    enable(self.withdrawQueueButton, self.open and not self.viewing and self.bankOpen and #self.queue > 0 and not busy and not IsTradeSkillLinked())
+    enable(self.withdrawQueueButton, self.open and not self.viewing and (self.bankOpen or self.guildBankOpen) and #self.queue > 0 and not busy and not IsTradeSkillLinked())
     enable(self.stopButton, busy)
     enable(self.clearButton, #self.queue > 0 and not busy and not self.viewing)
     self.statusText:SetText(self.status or "Prêt. La fabrication ne démarre qu'après ton clic.")

@@ -29,5 +29,16 @@ combat=false; A:OnEvent("PLAYER_REGEN_ENABLED")
 assert(not frame:IsShown() and not A.hideAfterCombat, "fermeture appliquée dès la sortie de combat")
 frame:Show(); A.closeButton.scripts.OnClick()
 assert(not frame:IsShown(), "fermeture immédiate hors combat")
+local page=A.recipePage
+local pageShow,pageHide=page.Show,page.Hide
+function page:Show() assert(not combat, 'afficher un ancêtre du bouton feu en combat'); pageShow(self) end
+function page:Hide() assert(not combat, 'masquer un ancêtre du bouton feu en combat'); pageHide(self) end
+combat=false; A:ShowDetailPage('recipe')
+combat=true; A:ShowDetailPage('queue')
+assert(A.detailPage=='recipe' and page:IsShown(), 'changement de page bloqué en combat')
+combat=false; A:ShowDetailPage('queue')
+assert(A.detailPage=='queue' and not page:IsShown(), 'changement de page disponible hors combat')
+A:ShowDetailPage('recipe')
+page.Show,page.Hide=pageShow,pageHide
 InCombatLockdown=oldCombat
 print("PASS: croix, Échap, métier fermé, bascule, déplacement et redimensionnement en combat")

@@ -2,6 +2,7 @@
 local A = ChromieCrafting
 local widgets = {}
 local methods = {}
+local secureClick = function() end
 local function widget(name, parent)
     local w = {name=name,parent=parent,scripts={},shown=true,text="",enabled=true,width=100,height=20,scroll=0}
     setmetatable(w, {__index=methods})
@@ -71,6 +72,7 @@ function CreateFrame(kind, name, parent, template)
     local w=widget(name,parent)
     w.kind=kind
     w.template=template
+    if template and template:find('SecureActionButtonTemplate', 1, true) then w.scripts.OnClick=secureClick end
     if template == "UICheckButtonTemplate" and name then widget(name.."Text",w) end
     return w
 end
@@ -155,4 +157,20 @@ assert(A.recipeVisibleRows==17 and A.queueVisibleRows==14, "retour à la taille 
 assert(not A.recipeRows[18]:IsShown() and not A.queueRows[15]:IsShown(), "lignes excédentaires masquées après réduction")
 A.recipes,A.byKey,A.queue=savedRecipes,savedByKey,savedQueue
 A.selectedKey=nil; A.recipeOffset=0; A.queueOffset=0; A:Render()
+assert(A.campfireButton, 'bouton feu de camp dans Cuisine')
+assert(A.campfireButton:GetScript('OnClick')==secureClick, 'le bouton feu conserve le gestionnaire sécurisé natif')
+local oldKnown, oldSpell = IsSpellKnown, GetSpellInfo
+function IsSpellKnown(id) return id==818 end
+function GetSpellInfo(id) if id==818 then return 'Feu de camp basique' end; return oldSpell(id) end
+A.profession='Cuisine'; A.open=true; A.viewing=nil; A:RenderDetails()
+assert(A.campfireButton:IsShown() and A.campfireButton.enabled, 'feu accessible dans son métier Cuisine')
+assert(A.campfireButton.template=='SecureActionButtonTemplate' and A.campfireButton:GetAttribute('type')=='spell'
+    and A.campfireButton:GetAttribute('spell')=='Feu de camp basique', 'feu lancé par clic sécurisé')
+A.pending={}; A:RenderDetails()
+assert(not A.campfireButton.enabled, 'feu désactivé pendant une fabrication')
+A.pending=nil; A.viewing=true; A:RenderDetails()
+assert(not A.campfireButton:IsShown(), 'aucun feu depuis les métiers mémorisés')
+A.viewing=nil; A.profession='Alchimie'; A:RenderDetails()
+assert(not A.campfireButton:IsShown(), 'feu réservé à Cuisine')
+IsSpellKnown, GetSpellInfo = oldKnown, oldSpell
 print("PASS: fenêtre, catégories repliables, sélection, ajout, inconnues, recherche vide")

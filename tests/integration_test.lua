@@ -53,6 +53,7 @@ function SpellIsTargeting() return false end
 function UnitCastingInfo() end
 function UnitChannelInfo() end
 function SelectTradeSkill() end
+function GetTradeSkillSelectionIndex() return 0 end
 local calls, stopped = {}, 0
 function DoTradeSkill(i, count) calls[#calls+1] = {index=i,count=count} end
 function StopTradeSkillRepeat() stopped=stopped+1 end
@@ -147,6 +148,19 @@ A:Stop()
 A:OnEvent("UNIT_SPELLCAST_SUCCEEDED", "player", "Potion A", "", 14, 101)
 assert(not A.pending and not A.running and A.jobs[1].count == 3, "arrêt du lot : succès tardif décompté sans répétition")
 available=8
+-- The native API uses a negative count when a required tool/focus is absent.
+available=-8
+assert(A:RecipeAt(3).available==8, "un compteur natif négatif ne bloque pas les composants disponibles")
+available=8
+local tradeLine = GetTradeSkillLine
+function GetTradeSkillLine() return "Cuisine", 100, 150 end
+A:RefreshRecipes(); A.dirty=nil
+available=3
+A:Tick(1)
+assert(A.byKey.s101.available==3, "cuisine actualisée même sans événement de sacs ou changement de recette")
+GetTradeSkillLine=tradeLine
+A:RefreshRecipes()
+A.selectedKey="s101"
 local resolve = A.Resolve
 function A:Resolve(key) local r, err=resolve(self,key); if r then r.requiresTarget=true end; return r,err end
 A:CraftSelected(3)
@@ -154,6 +168,15 @@ assert(calls[#calls].count == 1, "enchantement manuel : une seule cible par clic
 A:OnEvent("UNIT_SPELLCAST_SUCCEEDED", "player", "Potion A", "", 15, 101)
 assert(not A.pending and not A.running and A.jobs[1].count == 2, "enchantement : pas de répétition automatique")
 A.Resolve=resolve
+local selectSkill, getTools = SelectTradeSkill, GetTradeSkillTools
+local selected
+function SelectTradeSkill(index) selected=index end
+function GetTradeSkillTools(index) return 'Feu de cuisine', selected==index end
+before=#calls
+A.selectedKey='s101'; A:CraftSelected(1)
+assert(#calls==before+1, 'sélection native avant de vérifier le feu, pas après')
+A:OnEvent('UNIT_SPELLCAST_SUCCEEDED', 'player', 'Potion A', '', 16, 101)
+SelectTradeSkill, GetTradeSkillTools=selectSkill,getTools
 -- Restore the fixture expected by the UI smoke test.
 A.queue = {}; A.db.queues.Alchimie=A.queue
 A.Model.Add(A.queue, A.byKey.s101, 1)

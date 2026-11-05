@@ -1,4 +1,4 @@
-# Chromie Crafting — 0.3.0
+# Chromie Crafting — 0.4.0
 
 Addon français pour WoW 3.3.5a (30300), installé dans son propre dossier.
 
@@ -50,6 +50,15 @@ automatiques hors clic utilisateur. La fabrication s'arrête sur interruption,
 composants manquants, outil absent, recharge, fermeture ou combat.
 Relancer après avoir réglé le problème. Les opérations déjà terminées restent décomptées.
 
+### Cuisine et feu de camp
+
+Dans ton métier **Cuisine**, le bouton **Créer un feu de camp** lance le sort
+de feu de camp appris par le personnage, par clic sécurisé. Le client vérifie
+la recharge et les conditions du sort. Ce bouton est indisponible pendant une
+fabrication et n'apparaît pas dans les métiers mémorisés des autres personnages.
+La cuisine et ses outils sont actualisés chaque seconde : inutile de changer
+de recette ou de faire `/reload` après s'être approché d'un feu.
+
 ### Premier essai conseillé
 
 Choisir une recette peu coûteuse, lancer deux opérations, puis essayer une file
@@ -69,7 +78,7 @@ icônes sur le bord droit** ; les survoler affiche leur nom.
 Les fonds sont dessinés directement, sans les textures de tooltip qui peuvent
 être transparentes avec certains packs du client.
 
-Les boutons **Recette** et **File de fabrication** changent le panneau de droite,
+Les boutons **Recette** et **File de fabrication** changent le panneau de droite hors combat,
 sans perdre la sélection ni les quantités. Les composants ont de grandes icônes
 avec un détail explicite sacs / banque / autres sous chaque nom.
 Les boutons de retrait restent respectivement dans la fiche recette et dans la file.
@@ -93,7 +102,9 @@ la sortie de combat.
   peuvent pas être découverts par l'API de WoW.
 - Les métiers et stocks sont partagés entre personnages de cette installation,
   sur le **même royaume** ; les métiers d'un autre personnage ne permettent jamais
-  de fabriquer à sa place. La banque de guilde et le courrier ne sont pas inclus.
+  de fabriquer à sa place. La banque de guilde et le courrier ne sont pas inclus
+  dans les stocks mémorisés ou les quantités planifiables ; le retrait BDG ouvert
+  est disponible séparément.
 - Le bouton `+` d'une recette la marque comme favorite (`*`), un second clic la
   retire. Le bouton **Favoris** filtre la liste. Les favoris sont mémorisés par
   personnage connecté et métier ; ils s'appliquent aussi aux recettes consultées.
@@ -119,7 +130,8 @@ réellement disponibles pour le métier ouvert, indépendamment de ces options.
 
 ### Retirer les composants à la banque
 
-1. Ouvrir sa **banque personnelle** et son métier sur le personnage connecté.
+1. Ouvrir sa **banque personnelle**, ou l'**onglet souhaité de sa banque de guilde**,
+   et son métier sur le personnage connecté.
 2. Choisir une recette et une quantité d'opérations, puis **Retirer composants** ;
    ou préparer une file et utiliser **Retirer pour la file**.
 3. L'addon retire uniquement ce qui manque dans les sacs, attend la confirmation
@@ -129,11 +141,22 @@ réellement disponibles pour le métier ouvert, indépendamment de ces options.
 Le retrait s'arrête si la banque ou la fenêtre se ferme, en combat, sur un objet
 verrouillé, un curseur occupé ou une confirmation absente. **Arrêter** annule aussi
 la suite des retraits ; les composants déjà déplacés restent dans les sacs.
-Un stock insuffisant produit un retrait partiel avec un message explicite.
+Un ingrédient absent ne bloque pas le retrait des autres. Les stocks insuffisants
+sont retirés partiellement ; un bilan liste les composants encore manquants.
 Par sécurité, chaque transfert utilise une **case vide d'un sac général** : libérer
 une case même si une pile existante pourrait théoriquement accueillir les objets.
 L'addon ne supprime aucun objet, n'échange pas des objets différents et ne retire
 jamais de composants de la banque d'un autre personnage.
+
+**Banque de guilde :** seul l'onglet sélectionné au clic est utilisé, après
+actualisation de ses données serveur. Choisir un autre onglet et relancer le
+retrait pour y chercher les composants restants. Les droits de consultation et
+de retrait, ainsi que le quota de piles restant, sont respectés ; chaque pile
+prélevée peut compter comme un retrait de guilde, même partiel. Aucun argent
+n'est retiré. Changer d'onglet ou fermer la BDG arrête l'opération. En cas de
+refus ou de réponse tardive, vérifier le curseur et les sacs avant de réessayer.
+Il faut ensuite cliquer sur **Fabriquer** : le jeu ne consomme pas directement
+les composants de la BDG.
 
 ## Retour à Blizzard
 

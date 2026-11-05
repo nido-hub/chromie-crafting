@@ -84,7 +84,7 @@ function A:RecipeAt(index, category)
     local r = {
         key = spellID and ("s" .. spellID) or ("n:" .. name .. ":" .. (itemID or "")),
         spellID = spellID, name = name, category = category or "Divers", known = true,
-        available = available or 0, difficulty = kind, index = index, order = index,
+        available = math.abs(available or 0), difficulty = kind, index = index, order = index,
         icon = GetTradeSkillIcon(index), itemLink = itemLink, itemID = itemID,
         recipeLink = recipeLink, minimum = minimum or 1, maximum = maximum or 1,
         reagents = {}, cooldown = GetTradeSkillCooldown(index) or 0,
@@ -214,6 +214,7 @@ function A:NextCraft()
     elseif r.cooldown > 0 then reason = "Recette en recharge : " .. r.name
     elseif r.available < 1 then reason = "Composants manquants : " .. r.name
     else
+        SelectTradeSkill(r.index)
         local tools = {GetTradeSkillTools(r.index)}
         for i = 1, #tools, 2 do
             if tools[i] and not tools[i + 1] then reason = "Outil requis : " .. tools[i]; break end
@@ -226,7 +227,6 @@ function A:NextCraft()
     local count = r.requiresTarget and 1 or math.min(entry.count, r.available)
     self.pending = {key = r.key, spellID = r.spellID, name = r.name, target = r.requiresTarget, deadline = GetTime() + 120, jobs = self.jobs, remaining = count}
     self.status = (r.requiresTarget and "Choisis la cible de l'enchantement : " or "Fabrication : ") .. r.name .. " (" .. entry.count .. " restantes)"
-    SelectTradeSkill(r.index)
     -- Repeats must be requested at the user's click, never from OnUpdate.
     DoTradeSkill(r.index, count)
     self:Render()
@@ -243,6 +243,12 @@ end
 
 function A:Tick(elapsed)
     if self.withdrawal then self:ContinueWithdrawal() end
+    -- Nearby fires can change without a bag or trade-skill event on 3.3.5a.
+    if self.open and not self.viewing and not self.native and not InCombatLockdown()
+        and self.profession == GetSpellInfo(2550) and GetTime() >= (self.nextCookingRefresh or 0) then
+        self.nextCookingRefresh = GetTime() + 1
+        self.dirty = true
+    end
     if self.pending and not self.pending.timedOut and GetTime() > self.pending.deadline then
         -- Keep the operation identifiable: a manual enchant can succeed much later.
         self.pending.timedOut = true
@@ -285,8 +291,20 @@ function A:OnEvent(event, ...)
         if self.Render then self:Render() end
     elseif event == "BANKFRAME_CLOSED" then
         self.bankOpen = false
-        if self.withdrawal then self:FinishWithdrawal("Retrait arrêté : banque fermée.") end
+        if self.withdrawal and not self.withdrawal.guildTab then self:FinishWithdrawal("Retrait arrêté : banque fermée.") end
         if self.Render then self:Render() end
+    elseif event == "GUILDBANKFRAME_OPENED" then
+        self.guildBankOpen = true
+        if self.Render then self:Render() end
+    elseif event == "GUILDBANKFRAME_CLOSED" then
+        self.guildBankOpen = false
+        if self.withdrawal and self.withdrawal.guildTab then self:FinishWithdrawal("Retrait arrêté : banque de guilde fermée. Vérifie le curseur.") end
+        if self.Render then self:Render() end
+    elseif event == "GUILDBANKBAGSLOTS_CHANGED" then
+        if self.withdrawal and self.withdrawal.guildTab then
+            self.withdrawal.querying = nil
+            self:ContinueWithdrawal()
+        end
     elseif event == "PLAYERBANKSLOTS_CHANGED" then
         if self.bankOpen then self:SaveInventory() end
     elseif event == "TRADE_SKILL_UPDATE" or event == "BAG_UPDATE" or event == "GET_ITEM_INFO_RECEIVED" then
@@ -341,7 +359,7 @@ function A:OnEvent(event, ...)
     end
 end
 
-for _, event in ipairs({"ADDON_LOADED", "PLAYER_LOGIN", "TRADE_SKILL_SHOW", "TRADE_SKILL_CLOSE", "TRADE_SKILL_UPDATE", "BAG_UPDATE", "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "PLAYERBANKSLOTS_CHANGED", "GET_ITEM_INFO_RECEIVED", "UNIT_SPELLCAST_SENT", "UNIT_SPELLCAST_SUCCEEDED", "UNIT_SPELLCAST_FAILED", "UNIT_SPELLCAST_INTERRUPTED", "UI_ERROR_MESSAGE", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED"}) do
+for _, event in ipairs({"ADDON_LOADED", "PLAYER_LOGIN", "TRADE_SKILL_SHOW", "TRADE_SKILL_CLOSE", "TRADE_SKILL_UPDATE", "BAG_UPDATE", "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "GUILDBANKFRAME_OPENED", "GUILDBANKFRAME_CLOSED", "GUILDBANKBAGSLOTS_CHANGED", "PLAYERBANKSLOTS_CHANGED", "GET_ITEM_INFO_RECEIVED", "UNIT_SPELLCAST_SENT", "UNIT_SPELLCAST_SUCCEEDED", "UNIT_SPELLCAST_FAILED", "UNIT_SPELLCAST_INTERRUPTED", "UI_ERROR_MESSAGE", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED"}) do
     events:RegisterEvent(event)
 end
 events:SetScript("OnEvent", function(_, event, ...) A:OnEvent(event, ...) end)
