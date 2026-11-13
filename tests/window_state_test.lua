@@ -13,6 +13,6 @@ A.db.size={width=99999,height=99999}
 A:CreateUI()
 local scale=A.frame:GetScale()
 assert(A.frame:GetWidth()*scale<=876.001 and A.frame:GetHeight()*scale<=576.001, "ancienne taille limitée au nouvel écran")
-assert(A.frame:GetWidth()>=980 and A.frame:GetHeight()>=740, "surface minimum conservée sans écraser les champs")
+assert(A.frame:GetWidth()>=740 and A.frame:GetHeight()>=600, "surface compacte minimum conservée sans écraser les champs")
 UIParent:SetWidth(width); UIParent:SetHeight(height)
 print("PASS: dimensions sauvegardées, changement de résolution, petit écran")

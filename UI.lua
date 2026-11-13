@@ -1,6 +1,6 @@
 local A = ChromieCrafting
 local M = A.Model
-local MIN_WIDTH, MIN_HEIGHT = 980, 740
+local MIN_WIDTH, MIN_HEIGHT = 740, 600
 local RECIPE_ROW_HEIGHT = 24
 local colors = {optimal = "ffff8040", medium = "ffffff00", easy = "ff40bf40", trivial = "ff909090", gray = "ff909090"}
 local professionSpells = {2259, 2018, 2550, 7411, 4036, 3273, 45357, 25229, 2108, 2656, 3908}
@@ -159,20 +159,27 @@ end
 function A:LayoutUI()
     local width, height = self.frame:GetWidth(), self.frame:GetHeight()
     local bodyHeight = height - 174
-    local leftWidth = 350 + (width - MIN_WIDTH)*0.35
+    local leftWidth = 350 + math.max(0, width - 980)*0.35 - math.max(0, 820 - width)*0.875
+    local stackedFilters = leftWidth < 330
     local rightX = leftWidth + 28
     local rightWidth = width - 78 - rightX
     local pageWidth, pageHeight = rightWidth - 32, bodyHeight - 62
-    local queueWidth = pageWidth/2 - 8
+    local compact = pageWidth < 455 or pageHeight < 504
+    local short = pageHeight < 404
+    local stackedQueue = pageWidth < 455
+    local queueWidth = stackedQueue and pageWidth or pageWidth/2 - 8
     self.content:SetWidth(width - 24); self.content:SetHeight(bodyHeight)
     self.leftPanel:SetWidth(leftWidth); self.leftPanel:SetHeight(bodyHeight)
-    self.recipeVisibleRows = math.floor((bodyHeight - 150)/RECIPE_ROW_HEIGHT)
-    self.queueVisibleRows = math.floor((pageHeight - 135)/25)
+    self.recipeVisibleRows = math.floor((bodyHeight - (stackedFilters and 179 or 150))/RECIPE_ROW_HEIGHT)
+    self.queueVisibleRows = stackedQueue and math.floor((pageHeight - 202)/50) or math.floor((pageHeight - 135)/25)
     self.title:SetWidth(width - 300); self.subtitle:SetWidth(width - 300)
     self.skillTrack:SetWidth(width - 310)
     self.search:SetWidth(leftWidth - 24)
     self.searchLabel:SetWidth(leftWidth - 24)
-    self.favoritesFilter:ClearAllPoints(); self.favoritesFilter:SetPoint("TOPRIGHT", self.leftPanel, "TOPRIGHT", -12, -76)
+    self.sortDropdown:ClearAllPoints(); self.sortDropdown:SetPoint("TOPLEFT", stackedFilters and -6 or 157, stackedFilters and -76 or -47)
+    self.craftableFilter:ClearAllPoints(); self.craftableFilter:SetPoint("TOPLEFT", 8, stackedFilters and -105 or -76)
+    self.favoritesFilter:ClearAllPoints(); self.favoritesFilter:SetPoint("TOPRIGHT", self.leftPanel, "TOPRIGHT", -12, stackedFilters and -105 or -76)
+    self.recipeList:ClearAllPoints(); self.recipeList:SetPoint("TOPLEFT", 8, stackedFilters and -139 or -110)
     self.recipeList:SetWidth(leftWidth - 16); self.recipeList:SetHeight(self.recipeVisibleRows*RECIPE_ROW_HEIGHT)
     for _, row in ipairs(self.recipeRows) do
         row:SetWidth(leftWidth - 16); row.text:SetWidth(leftWidth - 91)
@@ -184,19 +191,37 @@ function A:LayoutUI()
     self.queuePage:SetWidth(pageWidth); self.queuePage:SetHeight(pageHeight)
     self.detailTitle:SetWidth(pageWidth - 104)
     self.descriptionScroll:SetWidth(pageWidth - 22)
-    self.reagentScroll:SetWidth(pageWidth - 22); self.reagentScroll:SetHeight(pageHeight - 328)
+    self.descriptionScroll:ClearAllPoints(); self.descriptionScroll:SetPoint("TOPLEFT", 0, short and -58 or -70)
+    self.descriptionScroll:SetHeight(short and 40 or compact and 60 or 92)
+    self.reagentTitle:ClearAllPoints(); self.reagentTitle:SetPoint("TOPLEFT", 0, short and -110 or compact and -142 or -174)
+    self.campfireButton:ClearAllPoints(); self.campfireButton:SetPoint("TOPRIGHT", 0, short and -104 or compact and -136 or -168)
+    self.reagentScroll:ClearAllPoints(); self.reagentScroll:SetPoint("TOPLEFT", 0, short and -134 or compact and -166 or -198)
+    self.reagentScroll:SetWidth(pageWidth - 22); self.reagentScroll:SetHeight(pageHeight - (short and 300 or compact and 348 or 328))
     self.reagentTitle:SetWidth(pageWidth)
-    self.output:SetWidth(pageWidth - 265)
+    self.quantityLabel:ClearAllPoints(); self.quantityLabel:SetPoint("BOTTOMLEFT", 0, short and 104 or compact and 120 or 76)
+    self.quantity:ClearAllPoints(); self.quantity:SetPoint("BOTTOMLEFT", 85, short and 96 or compact and 112 or 68)
+    self.maxButton:ClearAllPoints(); self.maxButton:SetPoint("BOTTOMLEFT", 150, short and 96 or compact and 112 or 68)
+    self.output:ClearAllPoints(); self.output:SetPoint("BOTTOMLEFT", compact and 0 or 265, short and 128 or compact and 144 or 65)
+    self.output:SetWidth(compact and pageWidth or pageWidth - 265)
+    self.craftButton:ClearAllPoints(); self.craftButton:SetPoint("BOTTOMLEFT", 0, short and 52 or compact and 68 or 24)
+    self.addButton:ClearAllPoints(); self.addButton:SetPoint("BOTTOMLEFT", 140, short and 52 or compact and 68 or 24)
+    self.withdrawButton:ClearAllPoints(); self.withdrawButton:SetPoint("BOTTOMRIGHT", 0, short and 12 or 24)
     self.queueList:SetWidth(queueWidth); self.queueList:SetHeight(self.queueVisibleRows*25)
     self.queueCount:SetWidth(queueWidth - 76)
     for _, row in ipairs(self.queueRows) do
         row:SetWidth(queueWidth); row.text:SetWidth(queueWidth - 146)
     end
-    local needsX = pageWidth/2 + 8
-    self.needsTitle:ClearAllPoints(); self.needsTitle:SetPoint("TOPLEFT", needsX, -8)
-    self.needsScroll:ClearAllPoints(); self.needsScroll:SetPoint("TOPLEFT", needsX, -36)
-    self.needsScroll:SetWidth(pageWidth/2 - 30); self.needsScroll:SetHeight(self.queueVisibleRows*25)
+    local needsX = stackedQueue and 0 or pageWidth/2 + 8
+    local needsY = stackedQueue and 92 + self.queueVisibleRows*25 or 36
+    self.needsTitle:ClearAllPoints(); self.needsTitle:SetPoint("TOPLEFT", needsX, -needsY + 28)
+    self.needsScroll:ClearAllPoints(); self.needsScroll:SetPoint("TOPLEFT", needsX, -needsY)
+    self.needsScroll:SetWidth(stackedQueue and pageWidth - 22 or pageWidth/2 - 30); self.needsScroll:SetHeight(self.queueVisibleRows*25)
+    self.startButton:ClearAllPoints(); self.startButton:SetPoint("BOTTOMLEFT", 0, stackedQueue and 54 or 22)
+    self.stopButton:ClearAllPoints(); self.stopButton:SetPoint("BOTTOMLEFT", 118, stackedQueue and 54 or 22)
+    self.clearButton:ClearAllPoints(); self.clearButton:SetPoint("BOTTOMLEFT", 191, stackedQueue and 54 or 22)
+    self.queueHelp:ClearAllPoints(); self.queueHelp:SetPoint("BOTTOMLEFT", 0, stackedQueue and 88 or 57)
     self.queueHelp:SetWidth(pageWidth)
+    self.stockTimestamp:SetWidth(width - 44)
     self.statusText:SetWidth(width - 100)
     self.recipeCount:SetWidth(leftWidth - 104)
     self:ShowDetailPage(self.detailPage or "recipe")
@@ -224,8 +249,8 @@ function A:CreateUI()
     end
     local size = self.db.size or {}
     frame:SetScale(scale)
-    frame:SetWidth(math.max(MIN_WIDTH, math.min(maxWidth, tonumber(size.width) or MIN_WIDTH)))
-    frame:SetHeight(math.max(MIN_HEIGHT, math.min(maxHeight, tonumber(size.height) or MIN_HEIGHT)))
+    frame:SetWidth(math.max(MIN_WIDTH, math.min(maxWidth, tonumber(size.width) or 980)))
+    frame:SetHeight(math.max(MIN_HEIGHT, math.min(maxHeight, tonumber(size.height) or 740)))
     frame:SetResizable(true); frame:SetMinResize(MIN_WIDTH, MIN_HEIGHT); frame:SetMaxResize(maxWidth, maxHeight)
     local p = self.db.position
     if p then frame:SetPoint(p.point, UIParent, p.relativePoint, p.x, p.y) else frame:SetPoint("CENTER") end
@@ -294,11 +319,12 @@ function A:CreateUI()
         {{"all","Toutes les recettes"},{"known","Connues"},{"unknown","À apprendre"}},
         function() return A.options.state end,
         function(value) A.options.state=value; A.recipeOffset=0; A:Render() end)
-    dropdown(left, "ChromieCraftingSort", 157, -47, 135,
+    self.sortDropdown = dropdown(left, "ChromieCraftingSort", 157, -47, 135,
         {{"skill","Compétence"},{"name","Nom"},{"available","Planifiables"}},
         function() return A.options.sort end,
         function(value) A.options.sort=value; A.recipeOffset=0; A:Render() end)
     local craftable = CreateFrame("CheckButton", "ChromieCraftingMakeable", left, "UICheckButtonTemplate")
+    self.craftableFilter = craftable
     craftable:SetPoint("TOPLEFT", 8, -76); craftable:SetWidth(24); craftable:SetHeight(24)
     _G[craftable:GetName() .. "Text"]:SetText("Planifiables")
     craftable:SetScript("OnClick", function(self) A.options.craftable=self:GetChecked() and true or false; A.recipeOffset=0; A:Render() end)
@@ -392,6 +418,7 @@ function A:CreateUI()
     self.setReagents, self.reagentScroll = textScroll(details, "ChromieCraftingReagents", 0, -198, 492, 174)
     self.reagentScroll.text:SetSpacing(8)
     local quantityLabel = label(details, "Opérations :", 0, 0)
+    self.quantityLabel = quantityLabel
     quantityLabel:ClearAllPoints(); quantityLabel:SetPoint("BOTTOMLEFT", 0, 76)
     self.quantity = edit(details, 85, -250, 55, true); self.quantity:SetText("1")
     self.quantity:ClearAllPoints(); self.quantity:SetPoint("BOTTOMLEFT", 85, 68)
@@ -769,7 +796,8 @@ function A:CreateNavigation()
     end
     self.bankOption = option("ChromieCraftingIncludeBank", "Inclure la banque", 245, "includeBank")
     self.altsOption = option("ChromieCraftingIncludeAlts", "Inclure les autres personnages", 430, "includeAlts")
-    self.stockTimestamp = label(self.frame, "", 22, -111, 880)
+    self.stockTimestamp = label(self.frame, "", 22, -104, 880)
+    self.stockTimestamp:SetHeight(24)
 end
 
 function A:RenderNavigation()
@@ -781,10 +809,13 @@ function A:RenderNavigation()
     self.stockTimestamp:SetText("Recettes : " .. (saved and formatDate and formatDate("%d/%m %H:%M", saved.updated) or "à scanner") .. " • Stocks mémorisés : dernière connexion / visite de banque. Retrait ou transfert requis avant fabrication.")
     if InCombatLockdown() then return end
     local names, learned = self:ProfessionNames(), self:LearnedProfessions()
+    local tabSize = math.min(44, math.floor((self.frame:GetHeight() - 174)/math.max(1, #names)) - 2)
     local selectedCharacter = self.viewedCharacter or self.characterKey
     for i, tab in ipairs(self.professionTabs) do
         local name = names[i]
         if name then
+            tab:SetWidth(tabSize); tab:SetHeight(tabSize)
+            tab:ClearAllPoints(); tab:SetPoint("TOPRIGHT", -12, -136 - (i-1)*(tabSize + 2))
             tab.profession = name
             tab.icon:SetTexture(professionIcon(name))
             tab.surface.fill:SetTexture(self.profession == name and 0.8 or 0.15, self.profession == name and 0.6 or 0.12, self.profession == name and 0.2 or 0.075, 1)

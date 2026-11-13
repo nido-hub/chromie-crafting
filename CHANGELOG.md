@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.3
+
+- Fenêtre réductible jusqu'à 740 × 600 sans réduire la police lors du redimensionnement ; taille et position conservées par personnage.
+- Disposition compacte automatique : commandes de fabrication sur plusieurs lignes, besoins cumulés sous la file et filtres empilés dans les colonnes étroites.
+- Descriptions, composants, recettes et besoins restent accessibles par défilement ; onglets de métiers ajustés à la hauteur disponible.
+- Tests de régression sur dix tailles de fenêtre, la mémorisation des dimensions et le retour à la disposition large.
+- Rendu et lisibilité des textes longs à confirmer dans le client WoW 3.3.5a.
+
 ## 0.4.2
 
 - La croix et Échap ferment immédiatement la fenêtre même en combat, via les gestionnaires sécurisés de WoW. Le déplacement et le redimensionnement restent bloqués en combat.

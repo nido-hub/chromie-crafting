@@ -1,4 +1,4 @@
-# Chromie Crafting — 0.4.2
+# Chromie Crafting — 0.4.3
 
 Addon français pour WoW 3.3.5a (30300), installé dans son propre dossier.
 
@@ -26,8 +26,13 @@ lance aucune fabrication.
 **Redimensionnement :** tirer la poignée du coin inférieur droit. La largeur
 des colonnes et le nombre de lignes visibles s'adaptent sans grossir le texte.
 La taille est mémorisée par personnage et limitée à la taille de l'écran.
-La taille minimum conserve la disposition et la lisibilité des contrôles.
-La nouvelle surface minimum est de 980 × 740, réduite automatiquement sur les petits écrans.
+La taille minimum est de **740 × 600**, sans réduire la police lors du redimensionnement.
+En mode compact, les commandes de fabrication passent sur plusieurs lignes et
+les besoins cumulés se placent sous la file. Les listes affichent moins de lignes,
+mais toutes les informations restent accessibles par défilement.
+Dans les fenêtres les plus étroites, les filtres de recettes sont aussi empilés.
+La fenêtre s'ouvre par défaut en 980 × 740 ; la taille choisie reste mémorisée.
+Sur les écrans trop petits pour le minimum, l'échelle est réduite automatiquement.
 Après un changement de résolution ou d'échelle de l'interface pendant la session,
 faire `/reload` pour recalculer les limites de redimensionnement.
 
