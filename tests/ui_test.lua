@@ -3,6 +3,16 @@ local A = ChromieCrafting
 local widgets = {}
 local methods = {}
 local secureClick = function() end
+local secureContext = false
+local function runSnippet(self, attribute, ...)
+    local body = self:GetAttribute(attribute)
+    if not body then return end
+    local fn = assert(loadstring("return function(self, button, down) " .. body .. " end"))()
+    local previous = secureContext
+    secureContext = true
+    fn(self, ...)
+    secureContext = previous
+end
 local function widget(name, parent)
     local w = {name=name,parent=parent,scripts={},shown=true,text="",enabled=true,width=100,height=20,scroll=0}
     setmetatable(w, {__index=methods})
@@ -12,7 +22,16 @@ local function widget(name, parent)
 end
 function methods:SetScript(event, fn) self.scripts[event]=fn end
 function methods:GetScript(event) return self.scripts[event] end
-function methods:HookScript(event, fn) local old=self.scripts[event]; self.scripts[event]=function(...) if old then old(...) end; fn(...) end end
+function methods:HookScript(event, fn)
+    local old=self.scripts[event]
+    self.scripts[event]=function(...)
+        if old then old(...) end
+        local previous=secureContext
+        secureContext=false
+        fn(...)
+        secureContext=previous
+    end
+end
 function methods:CreateFontString(name) return widget(name,self) end
 function methods:CreateTexture(name) return widget(name,self) end
 function methods:SetText(text) self.text=tostring(text or "") end
@@ -30,8 +49,16 @@ function methods:SetHeight(n)
 end
 function methods:GetHeight() return self.height end
 function methods:GetStringHeight() return 40 end
-function methods:Show() self.shown=true end
-function methods:Hide() self.shown=false end
+function methods:Show()
+    if self.shown then return end
+    self.shown=true
+    if self.template == 'SecureHandlerShowHideTemplate' and self.scripts.OnShow then self.scripts.OnShow(self) end
+end
+function methods:Hide()
+    if not self.shown then return end
+    self.shown=false
+    if self.template == 'SecureHandlerShowHideTemplate' and self.scripts.OnHide then self.scripts.OnHide(self) end
+end
 function methods:IsShown() return self.shown end
 function methods:Enable() assert(self.kind~="EditBox", "EditBox:Enable indisponible en 3.3.5a"); self.enabled=true end
 function methods:Disable() assert(self.kind~="EditBox", "EditBox:Disable indisponible en 3.3.5a"); self.enabled=false end
@@ -40,6 +67,12 @@ function methods:GetChecked() return self.checked end
 function methods:GetName() return self.name end
 function methods:SetAttribute(key,value) self.attributes=self.attributes or {}; self.attributes[key]=value end
 function methods:GetAttribute(key) return self.attributes and self.attributes[key] end
+function methods:SetFrameRef(key, frame) self.refs=self.refs or {}; self.refs[key]=frame end
+function methods:GetFrameRef(key) return self.refs and self.refs[key] end
+function methods:SetBindingClick(priority, key, name, button) self.binding={key=key,name=name,button=button} end
+function methods:ClearBindings() self.binding=nil end
+function methods:Click(button) self.scripts.OnClick(self, button or 'LeftButton') end
+function methods:IsTestSecureContext() return secureContext end
 function methods:HasFocus() return self.focused end
 function methods:SetFocus() self.focused=true; if self.scripts.OnEditFocusGained then self.scripts.OnEditFocusGained(self) end end
 function methods:ClearFocus()
@@ -73,6 +106,12 @@ function CreateFrame(kind, name, parent, template)
     w.kind=kind
     w.template=template
     if template and template:find('SecureActionButtonTemplate', 1, true) then w.scripts.OnClick=secureClick end
+    if template == 'SecureHandlerClickTemplate' then
+        w.scripts.OnClick=function(self, button, down) runSnippet(self, '_onclick', button, down) end
+    elseif template == 'SecureHandlerShowHideTemplate' then
+        w.scripts.OnShow=function(self) runSnippet(self, '_onshow') end
+        w.scripts.OnHide=function(self) runSnippet(self, '_onhide') end
+    end
     if template == "UICheckButtonTemplate" and name then widget(name.."Text",w) end
     return w
 end
@@ -87,6 +126,7 @@ function UIDropDownMenu_CreateInfo() return {} end
 function UIDropDownMenu_AddButton() end
 function CloseDropDownMenus() end
 function GetItemIcon(id) return "item-icon-"..tostring(id) end
+function IsShiftKeyDown() return false end
 assert(io.open(ADDON_ROOT .. "/UI.lua"), "UI.lua absent : fenêtre non implémentée")
 dofile(ADDON_ROOT .. "/UI.lua")
 A.native=false; A.open=true; A.pending=nil; A.running=false

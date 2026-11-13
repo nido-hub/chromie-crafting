@@ -56,8 +56,8 @@ local function surface(parent, r, g, b, gold)
     parent.surface = {fill=fill}
 end
 
-local function button(parent, text, x, y, width, callback, template)
-    local b = CreateFrame("Button", nil, parent, template)
+local function button(parent, text, x, y, width, callback, template, name)
+    local b = CreateFrame("Button", name, parent, template)
     surface(b, 0.14, 0.115, 0.075, true)
     local font = label(b, "", 0, 0)
     font:ClearAllPoints(); font:SetPoint("LEFT", b, "LEFT", 3, 0); font:SetPoint("RIGHT", b, "RIGHT", -3, 0)
@@ -214,7 +214,7 @@ end
 
 function A:CreateUI()
     if self.frame then return end
-    local frame = CreateFrame("Frame", "ChromieCraftingFrame", UIParent)
+    local frame = CreateFrame("Frame", "ChromieCraftingFrame", UIParent, "SecureHandlerShowHideTemplate")
     self.frame = frame
     local scale = math.min(1, (UIParent:GetWidth() - 80)/MIN_WIDTH, (UIParent:GetHeight() - 48)/MIN_HEIGHT)
     local maxWidth, maxHeight = (UIParent:GetWidth() - 24)/scale, (UIParent:GetHeight() - 24)/scale
@@ -242,22 +242,19 @@ function A:CreateUI()
         A:SaveWindowGeometry()
     end)
     frame:Hide()
-    frame:SetScript("OnHide", function()
-        if A.escapeFrame then A.escapeFrame:Hide() end
+    frame:HookScript("OnHide", function()
+        A.hideAfterCombat = nil
         if A.switching then return end
         if A.withdrawal then A:FinishWithdrawal("Retrait arrêté : fenêtre fermée.") end
         A:Stop()
         if A.open then A.open = false; CloseTradeSkill() end
     end)
-    -- Escape hides an unprotected proxy, never the ancestor of secure profession tabs.
-    local escape = CreateFrame("Frame", "ChromieCraftingEscapeFrame", UIParent)
-    self.escapeFrame = escape
-    escape:SetWidth(1); escape:SetHeight(1); escape:SetPoint("CENTER")
-    escape:Hide()
-    escape:SetScript("OnHide", function() A:RequestClose() end)
-    frame:SetScript("OnShow", function() escape:Show() end)
-    UISpecialFrames[#UISpecialFrames + 1] = "ChromieCraftingEscapeFrame"
-    local close = button(frame, "X", 0, 0, 26, function() A:RequestClose() end)
+    -- Only secure handlers may hide the ancestor of profession/campfire buttons in combat.
+    local close = button(frame, "X", 0, 0, 26, nil, "SecureHandlerClickTemplate", "ChromieCraftingCloseButton")
+    close:SetFrameRef("window", frame)
+    close:SetAttribute("_onclick", [[self:GetFrameRef("window"):Hide()]])
+    frame:SetAttribute("_onshow", [[self:SetBindingClick(true, "ESCAPE", "ChromieCraftingCloseButton", "LeftButton")]])
+    frame:SetAttribute("_onhide", [[self:ClearBindings()]])
     self.closeButton = close
     close:ClearAllPoints(); close:SetPoint("TOPRIGHT", -8, -8)
     local native = button(frame, "Fenêtre Blizzard", 0, 0, 125, function() A:UseNative() end)
@@ -327,9 +324,14 @@ function A:CreateUI()
         row.text = label(row, "", 26, -4, 343)
         row.text:SetHeight(20)
         row.amount = label(row, "", 370, -4, 45)
-        row:SetScript("OnClick", function(self)
+        row:SetScript("OnClick", function(self, mouseButton)
             local r = self.data
             if not r then return end
+            if not r.header and mouseButton == "LeftButton" and IsShiftKeyDown() then
+                local link = r.recipeLink or (r.spellID and GetSpellLink(r.spellID))
+                if link then ChatEdit_InsertLink(link) end
+                return
+            end
             if r.header then A.options.collapsed[r.category] = not A.options.collapsed[r.category]
             else A.selectedKey = r.key end
             A:Render()
@@ -342,6 +344,7 @@ function A:CreateUI()
             elseif r.itemLink then GameTooltip:SetHyperlink(r.itemLink)
             else GameTooltip:SetText(r.name) end
             GameTooltip:AddLine(r.known and "Connue — opérations planifiables selon les stocks sélectionnés, pas nécessairement fabricables maintenant" or "À apprendre — catalogue AtlasLoot, disponibilité serveur à vérifier", 0.4, 0.8, 1, true)
+            GameTooltip:AddLine("Maj + clic gauche : insérer le lien de la recette dans le chat", 0.8, 0.75, 0.6, true)
             GameTooltip:Show()
         end)
         row:SetScript("OnLeave", function() GameTooltip:Hide() end)

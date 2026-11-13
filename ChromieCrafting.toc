@@ -2,7 +2,7 @@
 ## Title: Chromie Crafting
 ## Notes: Métiers : catégories, recettes à apprendre et file de fabrication.
 ## Author: OpenCode
-## Version: 0.4.1
+## Version: 0.4.2
 ## SavedVariables: ChromieCraftingAccountDB
 ## SavedVariablesPerCharacter: ChromieCraftingDB
 ## OptionalDeps: AtlasLoot, AtlasLoot_Crafting, Blizzard_TradeSkillUI

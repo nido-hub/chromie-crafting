@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.2
+
+- La croix et Échap ferment immédiatement la fenêtre même en combat, via les gestionnaires sécurisés de WoW. Le déplacement et le redimensionnement restent bloqués en combat.
+- Maj + clic gauche sur une ligne de recette insère son lien dans le chat ouvert, sans changer la sélection ni lancer de fabrication. Fonctionne aussi avec les recettes mémorisées et celles du catalogue ayant un identifiant de sort.
+- Tests de régression pour la fermeture sécurisée en combat, la libération d'Échap et le partage des recettes.
+- Rendu et restrictions réelles du client 3.3.5a à confirmer en jeu.
+
 ## 0.4.1
 
 - Correction du compteur fabricable : calcul depuis les composants présents dans les sacs, sans rester bloqué par un compteur natif périmé à zéro.

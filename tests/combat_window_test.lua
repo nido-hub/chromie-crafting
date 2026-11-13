@@ -5,17 +5,31 @@ local combat=false
 function InCombatLockdown() return combat end
 local frame=A.frame
 local hide=frame.Hide
-function frame:Hide() assert(not combat,"tentative de masquer un ancêtre protégé en combat"); hide(self) end
+function frame:Hide() assert(not combat or self:IsTestSecureContext(),"tentative de masquer un ancêtre protégé en combat"); hide(self) end
 function frame:StartMoving() assert(not combat,"déplacement protégé en combat"); self.moving=true end
 function frame:StartSizing() assert(not combat,"redimensionnement protégé en combat"); self.sizing=true end
 function frame:StopMovingOrSizing() assert(not combat,"arrêt de déplacement protégé en combat"); self.moving,self.sizing=nil,nil end
 for _,name in ipairs(UISpecialFrames) do assert(name~="ChromieCraftingFrame", "Échap ne doit pas masquer directement la fenêtre protégée") end
-assert(A.escapeFrame and A.closeButton, "Échap et croix passent par la fermeture différée")
+assert(A.closeButton, "bouton de fermeture absent")
+local oldClose,oldRepeat=CloseTradeSkill,StopTradeSkillRepeat
+local closed,stopped=0,0
+function CloseTradeSkill() closed=closed+1 end
+function StopTradeSkillRepeat() stopped=stopped+1 end
+A.open=true; A.running=true
 frame:Show(); combat=true
-A.closeButton.scripts.OnClick()
-assert(frame:IsShown() and A.hideAfterCombat, "croix en combat : fermeture en attente")
-A.escapeFrame.scripts.OnHide()
-assert(frame:IsShown() and A.hideAfterCombat, "Échap en combat : aucune opération interdite")
+A.closeButton:Click()
+assert(not frame:IsShown() and not A.hideAfterCombat, "croix : fermeture immédiate en combat")
+assert(closed==1 and stopped>0 and not A.open and not A.running, "fermer arrête le craft et ferme le métier natif")
+assert(not frame.binding, "fermeture : Échap libéré même en combat")
+combat=false; frame:Show(); combat=true
+A:RequestClose()
+assert(A.hideAfterCombat, "fermeture API en attente")
+assert(frame.binding and frame.binding.key=='ESCAPE', "Échap lié à la fermeture sécurisée")
+_G[frame.binding.name]:Click(frame.binding.button)
+assert(not frame:IsShown() and not frame.binding and not A.hideAfterCombat, "Échap : fermeture immédiate et attente annulée")
+combat=false; frame:Show(); A:OnEvent('PLAYER_REGEN_ENABLED')
+assert(frame:IsShown(), "aucune fermeture périmée après réouverture")
+combat=false; frame:Show(); combat=true
 frame.scripts.OnDragStart(frame)
 A.resizeGrip.scripts.OnMouseDown(A.resizeGrip,"LeftButton")
 A.resizeGrip.scripts.OnMouseUp()
@@ -27,7 +41,7 @@ A:UseNative()
 assert(A.native==native, "bascule vers Blizzard bloquée en combat")
 combat=false; A:OnEvent("PLAYER_REGEN_ENABLED")
 assert(not frame:IsShown() and not A.hideAfterCombat, "fermeture appliquée dès la sortie de combat")
-frame:Show(); A.closeButton.scripts.OnClick()
+frame:Show(); A.closeButton:Click()
 assert(not frame:IsShown(), "fermeture immédiate hors combat")
 local page=A.recipePage
 local pageShow,pageHide=page.Show,page.Hide
@@ -41,4 +55,6 @@ assert(A.detailPage=='queue' and not page:IsShown(), 'changement de page disponi
 A:ShowDetailPage('recipe')
 page.Show,page.Hide=pageShow,pageHide
 InCombatLockdown=oldCombat
-print("PASS: croix, Échap, métier fermé, bascule, déplacement et redimensionnement en combat")
+CloseTradeSkill,StopTradeSkillRepeat=oldClose,oldRepeat
+frame.Hide=hide
+print("PASS: fermeture immédiate par croix et Échap sécurisés en combat ; protections et fermeture API différée")

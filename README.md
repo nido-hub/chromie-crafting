@@ -1,4 +1,4 @@
-# Chromie Crafting — 0.4.1
+# Chromie Crafting — 0.4.2
 
 Addon français pour WoW 3.3.5a (30300), installé dans son propre dossier.
 
@@ -15,7 +15,13 @@ déplacer autour de la minimap ; sa position est mémorisée par personnage.
 Le lanceur est indisponible en combat et pendant une fabrication en cours.
 
 La nouvelle fenêtre remplace celle de Blizzard. Déplaçable par glisser-déposer,
-elle adapte son échelle à la taille de l'écran. Échap ferme la fenêtre.
+elle adapte son échelle à la taille de l'écran. Échap ou la croix ferme la fenêtre,
+y compris en combat.
+
+**Partager un craft :** ouvrir la saisie du chat (Entrée, ou le canal souhaité),
+puis **Maj + clic gauche sur la ligne de la recette**. Son lien est inséré dans
+le message ; Entrée l'envoie. Cela ne change pas la recette sélectionnée et ne
+lance aucune fabrication.
 
 **Redimensionnement :** tirer la poignée du coin inférieur droit. La largeur
 des colonnes et le nombre de lignes visibles s'adaptent sans grossir le texte.
@@ -90,8 +96,8 @@ effacé.** Les déplacements et tailles choisis ensuite restent mémorisés.
 
 Les onglets de métiers utilisent des boutons sécurisés de WoW. En combat,
 le déplacement, le redimensionnement et le retour à Blizzard sont bloqués ;
-une fermeture demandée par Échap, la croix ou le métier est différée jusqu'à
-la sortie de combat.
+Échap et la croix utilisent une fermeture sécurisée immédiate. Une fermeture
+automatique du métier demandée par l'API reste différée jusqu'à la sortie de combat.
 
 - Un onglet à icône par métier de fabrication découvert, puis un sélecteur de personnage.
   Cliquer sur l'onglet d'un métier appris du personnage connecté ouvre réellement
